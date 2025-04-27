@@ -4,6 +4,7 @@ import snowflake.connector
 from snowflake.snowpark import Session
 from snowflake.snowpark.functions import col
 import requests
+import pandas as pd
 
 # Write directly to the app
 st.title(f":cup_with_straw: Customize Your Smoothie!:cup_with_straw:")
