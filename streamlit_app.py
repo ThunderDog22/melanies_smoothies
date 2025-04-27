@@ -22,19 +22,13 @@ conn = snowflake.connector.connect(
     database=st.secrets["database"],
     schema=st.secrets["schema"],
     role=st.secrets["role"],
-    disable_ocsp_checks=True  # <-- ADD THIS
+    disable_ocsp_checks=True  # <-- disable OCSP here
 )
 
-# 2️⃣ Create a Snowpark session
+# 2️⃣ Create a Snowpark session USING the manual connection
 session = Session.builder.configs({
-    "account": st.secrets["account"],
-    "user": st.secrets["user"],
-    "password": st.secrets["password"],
-    "warehouse": st.secrets["warehouse"],
-    "database": st.secrets["database"],
-    "schema": st.secrets["schema"],
-    "role": st.secrets["role"],
-    "ocsp_fail_open": True  # <-- disables OCSP checking also for Snowpark
+    "connection": conn,      # <-- use the EXISTING connection
+    "ocsp_fail_open": True   # <-- extra safe disable inside Snowpark too
 }).create()
 
 my_dataframe = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME'))
