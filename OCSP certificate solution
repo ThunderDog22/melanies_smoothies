@@ -1,0 +1,64 @@
+📄 Troubleshooting OCSP Certificate Errors in Streamlit + Snowflake (and Solution)
+Problem
+When deploying a Streamlit app that connects to Snowflake, the following errors were happening:
+
+OperationalError: 254007: The certificate is revoked or could not be validated: hostname=xxx.snowflakecomputing.com
+
+OperationalError: 250001: Could not connect to Snowflake backend after 2 attempt(s). Aborting
+
+Certificate validation failed because of OCSP (Online Certificate Status Protocol) checks.
+
+Even disabling OCSP via connection settings was not enough — the app still failed.
+
+Cause
+Streamlit was first manually creating a Snowflake connection (with OCSP disabled).
+
+But then Snowpark's Session.builder.configs({...}).create() created a new fresh connection, without OCSP disabled.
+
+So OCSP checking was still happening on that second connection — and causing the SSL validation to fail.
+
+Solution
+To fully disable OCSP checking across both Snowflake Connector and Snowpark Session:
+
+Manually create the Snowflake connector connection with disable_ocsp_checks=True:
+
+python
+Copy
+Edit
+conn = snowflake.connector.connect(
+    user=st.secrets["user"],
+    password=st.secrets["password"],
+    account=st.secrets["account"],
+    warehouse=st.secrets["warehouse"],
+    database=st.secrets["database"],
+    schema=st.secrets["schema"],
+    role=st.secrets["role"],
+    disable_ocsp_checks=True
+)
+Pass the manual connection into Snowpark Session.builder:
+
+python
+Copy
+Edit
+session = Session.builder.configs({
+    "connection": conn,
+    "ocsp_fail_open": True  # optional extra safety inside Snowpark
+}).create()
+This ensures only one connection is made — with OCSP checking completely disabled.
+
+Important Notes
+You must pass the conn object to Snowpark's builder using "connection": conn.
+
+Just adding "ocsp_fail_open": True inside configs is not enough alone — you still need to supply your own connection.
+
+Snowflake Connector version must be 3.14.0+ for disable_ocsp_checks to work.
+
+Why this happens
+Snowflake enforces strict SSL validation by default.
+
+If OCSP servers are unreachable or certificates are misconfigured, connections will fail.
+
+Disabling OCSP allows the app to proceed even if OCSP validation cannot complete.
+
+References
+Snowflake Community: How to turn off OCSP checking
