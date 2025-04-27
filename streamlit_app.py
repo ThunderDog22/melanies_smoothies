@@ -1,5 +1,7 @@
 # Import python packages
 import streamlit as st
+import snowflake.connector
+from snowflake.snowpark import Session
 from snowflake.snowpark.functions import col
 
 # Write directly to the app
@@ -11,9 +13,28 @@ st.write(
 name_on_order = st.text_input("Name on Smoothie: ")
 st.write("The name of your Smoothie will be: ", name_on_order)
 
-cnx = st.connection("snowflake")
-session = cnx.session()
+# ❗ Manual connection with OCSP disabled
+conn = snowflake.connector.connect(
+    user=st.secrets["user"],
+    password=st.secrets["password"],
+    account=st.secrets["account"],
+    warehouse=st.secrets["warehouse"],
+    database=st.secrets["database"],
+    schema=st.secrets["schema"],
+    role=st.secrets["role"],
+    disable_ocsp_checks=True  # <-- ADD THIS
+)
 
+# Create a Snowpark session manually
+session = Session.builder.configs({
+    "account": st.secrets["account"],
+    "user": st.secrets["user"],
+    "password": st.secrets["password"],
+    "warehouse": st.secrets["warehouse"],
+    "database": st.secrets["database"],
+    "schema": st.secrets["schema"],
+    "role": st.secrets["role"]
+}).create()
 my_dataframe = session.table("smoothies.public.fruit_options").select(col('FRUIT_NAME'))
 #st.dataframe(data=my_dataframe, use_container_width=True)
 
